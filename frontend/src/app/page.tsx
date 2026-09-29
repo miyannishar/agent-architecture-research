@@ -29,13 +29,33 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        // Attempt to parse a structured error message from FastAPI
+        let errorMsg = `HTTP Error ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            errorMsg = Array.isArray(errorData.detail) 
+              ? errorData.detail.map((err: any) => err.msg).join(", ") 
+              : errorData.detail;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, we fallback to the generic HTTP error message
+          console.error("Failed to parse error response from backend:", parseError);
+        }
+        
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
       setResult(data);
     } catch (err: any) {
-      setError(err.message || 'An error occurred while running the test.');
+      console.error("Agent Evaluator Error:", err);
+      // Determine if it's a network failure (CORS/fetch failed) or a backend error
+      const displayError = err.message === 'Failed to fetch' 
+        ? 'Network Error: Could not connect to the backend. Please check if the server is running and CORS is configured correctly.' 
+        : err.message || 'An unexpected error occurred while running the test.';
+      
+      setError(displayError);
     } finally {
       setLoading(false);
     }
