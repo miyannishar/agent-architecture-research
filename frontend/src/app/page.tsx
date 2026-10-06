@@ -2,11 +2,27 @@
 
 import { useState } from 'react';
 
+interface TestResult {
+  architecture: string;
+  result: string;
+  final_answer: string;
+  num_agents: number;
+  num_calls: number;
+  latency_ms: number;
+  token_usage: number;
+  cost_estimate: number;
+}
+
+interface ValidationError {
+  msg: string;
+}
+
 export default function Home() {
   const [architecture, setArchitecture] = useState('single_agent');
+  const [numAgents, setNumAgents] = useState(3);
   const [prompt, setPrompt] = useState('Solve the following math problem: If I have 3 apples and give 1 away, how many do I have?');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<TestResult | null>(null);
   const [error, setError] = useState('');
 
   const runTest = async (e: React.FormEvent) => {
@@ -25,7 +41,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ architecture, task_prompt: prompt }),
+        body: JSON.stringify({ architecture, task_prompt: prompt, num_agents: architecture === 'single_agent' ? 1 : numAgents }),
       });
 
       if (!response.ok) {
@@ -35,7 +51,7 @@ export default function Home() {
           const errorData = await response.json();
           if (errorData.detail) {
             errorMsg = Array.isArray(errorData.detail) 
-              ? errorData.detail.map((err: any) => err.msg).join(", ") 
+              ? (errorData.detail as ValidationError[]).map((err) => err.msg).join(", ") 
               : errorData.detail;
           }
         } catch (parseError) {
@@ -48,12 +64,13 @@ export default function Home() {
 
       const data = await response.json();
       setResult(data);
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
       console.error("Agent Evaluator Error:", err);
       // Determine if it's a network failure (CORS/fetch failed) or a backend error
-      const displayError = err.message === 'Failed to fetch' 
+      const displayError = message === 'Failed to fetch' 
         ? 'Network Error: Could not connect to the backend. Please check if the server is running and CORS is configured correctly.' 
-        : err.message || 'An unexpected error occurred while running the test.';
+        : message || 'An unexpected error occurred while running the test.';
       
       setError(displayError);
     } finally {
@@ -80,8 +97,24 @@ export default function Home() {
               <option value="single_agent">Single-Agent Baseline</option>
               <option value="parallel_voting">Parallel Voting</option>
               <option value="sequential_review">Sequential Review</option>
+              <option value="debate">Multi-Agent Debate</option>
             </select>
           </div>
+
+          {architecture !== 'single_agent' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Number of Agents</label>
+              <select
+                value={numAgents}
+                onChange={(e) => setNumAgents(Number(e.target.value))}
+                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-3 border"
+              >
+                {[2, 3, 5].map((n) => (
+                  <option key={n} value={n}>{n} agents</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Reasoning Task / Prompt</label>
@@ -112,10 +145,14 @@ export default function Home() {
         {result && (
           <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-xl">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Evaluation Results</h2>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-500">Latency</p>
                 <p className="text-xl font-bold text-gray-900">{result.latency_ms.toFixed(2)} ms</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <p className="text-sm text-gray-500">Model Calls</p>
+                <p className="text-xl font-bold text-gray-900">{result.num_calls}</p>
               </div>
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-500">Tokens Used</p>
@@ -127,6 +164,11 @@ export default function Home() {
               </div>
             </div>
             
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
+              <p className="text-sm text-gray-500">Final Answer</p>
+              <p className="text-xl font-bold text-gray-900">{result.final_answer || '(no answer parsed)'}</p>
+            </div>
+
             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
               <p className="text-sm text-gray-500 mb-2">Final Reasoning Output</p>
               <div className="text-gray-800 whitespace-pre-wrap bg-gray-50 p-4 rounded font-mono text-sm">

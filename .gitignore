@@ -26,3 +26,7 @@ build/
 # IDEs
 .vscode/
 .idea/
+
+# Experiment data and outputs
+backend/data/
+backend/results/
