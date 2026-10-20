@@ -179,9 +179,6 @@ def run_test(request: TestRequest):
 @app.post("/api/benchmark/run")
 def run_benchmark(request: BenchmarkRequest):
     """Run a paired GSM8K benchmark and persist row-level results with provenance."""
-    enabled = os.getenv("ENABLE_BENCHMARK_RUNS", "false").strip().lower() in {"1", "true", "yes"}
-    if not enabled:
-        raise HTTPException(status_code=503, detail="Benchmark runs are disabled. Set ENABLE_BENCHMARK_RUNS=true to enable them.")
     if not llm_configured():
         raise HTTPException(status_code=503, detail="Set LLM_API_KEY to run real benchmark experiments; mock mode is disabled here.")
 

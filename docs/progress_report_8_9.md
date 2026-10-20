@@ -32,7 +32,7 @@ The browser sends a configuration to the API. The backend loads one seeded set o
 
 ```mermaid
 flowchart LR
-    UI[Next.js research dashboard] -->|POST /api/benchmark/run| API[FastAPI validation and run gate]
+    UI[Next.js research dashboard] -->|POST /api/benchmark/run| API[FastAPI validation]
     API --> DATA[Seeded GSM8K loader]
     DATA -->|source row IDs + SHA-256| COORD[Paired run coordinator]
     COORD --> BASE[Single-agent baseline]
@@ -52,7 +52,7 @@ flowchart LR
 
 The backend now exposes `POST /api/benchmark/run`. Each request includes the single-agent baseline automatically, then runs each selected configuration against the same seeded question subset. For every question and architecture, the run records the prediction, correctness, model calls, input and output tokens, total tokens, latency, estimated cost, answer trace, and any item-level error. The endpoint returns summaries and case-level results while saving JSONL rows and a JSON summary under `backend/results/`.
 
-The request model limits a sample to 50 questions, restricts supported agent counts and debate rounds, rejects duplicate configurations, and caps an interactive request at 120 planned model calls. The server also requires the operator to enable `ENABLE_BENCHMARK_RUNS` and configure a real model API key. Mock mode is rejected for research benchmark requests.
+The request model limits a sample to 50 questions, restricts supported agent counts and debate rounds, rejects duplicate configurations, and caps an interactive request at 120 planned model calls. The endpoint is available without a feature-enable flag, but it requires a real model API key. Mock mode is rejected for research benchmark requests.
 
 Representative request validation:
 
@@ -121,7 +121,7 @@ The screenshot documents the initial experiment-setup view; it is not a screensh
 1. **The previous pilot cannot be verified.** It lacks a seed and dataset fingerprint, and its baseline answer labels do not match the current default-seed sample. The new pipeline records original question IDs and a SHA-256 dataset fingerprint in each run so future results can be audited against their source.
 2. **The shared token ceiling is not equal total compute.** Dividing an output-token cap by call count does not equalize input tokens, actual output lengths, latency, or cost. The dashboard now labels this condition precisely and reports measured input and output usage separately. The research should avoid describing the condition as fully compute-equivalent.
 3. **Interactive runs must remain bounded.** A large configuration sweep can exceed reasonable request duration and cost. The endpoint’s 120-call cap makes dashboard pilots manageable; broader evaluations should be run through `backend/run_experiments.py` or a background-job service.
-4. **Research runs require explicit operator setup.** Benchmarking is disabled by default. A controlled environment must set `ENABLE_BENCHMARK_RUNS=true` and provide `LLM_API_KEY` before the new API can execute real model calls.
+4. **Research runs require provider credentials.** The endpoint no longer has a separate enable flag. It requires `LLM_API_KEY` and runs can incur provider charges, so operators should keep credentials configured only in the intended backend environment.
 
 ## 7. Next Steps: Validation and Research Roadmap
 

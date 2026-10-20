@@ -15,7 +15,7 @@ Run each service from its own directory:
 - Frontend checks: `cd frontend && npm run lint` and `npm run build`
 - Benchmarks: from `backend/`, set `LLM_API_KEY` and run `python run_experiments.py --n 50`. Optional `--token-budget 3000` divides a completion-token cap across calls; it does not equalize prompt tokens or total compute.
 
-The dashboard reads `NEXT_PUBLIC_BACKEND_URL`, defaulting to `http://localhost:8000`. Backend environment examples are in `backend/.env.example`; keep real keys in local environment files and never commit them. Without `LLM_API_KEY`, the one-off API uses mock responses; benchmark runs reject mock mode and require both `LLM_API_KEY` and `ENABLE_BENCHMARK_RUNS=true` (off by default).
+The dashboard reads `NEXT_PUBLIC_BACKEND_URL`, defaulting to `http://localhost:8000`. Backend environment examples are in `backend/.env.example`; keep real keys in local environment files and never commit them. Without `LLM_API_KEY`, the one-off API uses mock responses; benchmark runs reject mock mode and require `LLM_API_KEY`. The benchmark endpoint is available without an enable flag and can incur provider charges.
 
 ## Code Style and Organization
 
